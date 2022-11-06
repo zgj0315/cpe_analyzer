@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{BufReader, Write};
 use std::path::Path;
 
@@ -7,6 +7,10 @@ use xml::reader::XmlEvent;
 use xml::EventReader;
 const CPE_DICT: &str = "./data/official-cpe-dictionary_v2.3.xml.zip";
 pub async fn download_cpe() -> Result<(), Box<dyn std::error::Error>> {
+    let path = Path::new("./data");
+    if !path.exists() {
+        fs::create_dir(path).unwrap();
+    }
     let path = Path::new(CPE_DICT);
     if path.exists() {
         println!(
