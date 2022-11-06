@@ -44,6 +44,25 @@ struct Cpe23Uri {
     other: String,
 }
 
+#[derive(Debug)]
+struct GroupByOne {
+    group_name: String,
+    count: u32,
+}
+
+#[derive(Debug)]
+struct GroupByTwo {
+    group_name_a: String,
+    group_name_b: String,
+    count: u32,
+}
+#[derive(Debug)]
+struct GroupByThree {
+    group_name_a: String,
+    group_name_b: String,
+    group_name_c: String,
+    count: u32,
+}
 pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
     let zip_file = File::open(CPE_DICT).unwrap();
     let mut archive = zip::ZipArchive::new(zip_file).unwrap();
@@ -69,7 +88,6 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
         (),
     )
     .unwrap();
-
     for e in parser {
         match e {
             Ok(XmlEvent::StartElement {
@@ -117,26 +135,76 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let mut stmt = conn.prepare("SELECT * from tbl_cpe").unwrap();
-    let cpe23uris = stmt
+    // let mut stmt = conn.prepare("SELECT * from tbl_cpe").unwrap();
+    // let rows = stmt
+    //     .query_map([], |row| {
+    //         Ok(Cpe23Uri {
+    //             part: row.get(0).unwrap(),
+    //             vendor: row.get(1).unwrap(),
+    //             product: row.get(2).unwrap(),
+    //             version: row.get(3).unwrap(),
+    //             update: row.get(4).unwrap(),
+    //             edition: row.get(5).unwrap(),
+    //             language: row.get(6).unwrap(),
+    //             sw_edition: row.get(7).unwrap(),
+    //             target_sw: row.get(8).unwrap(),
+    //             target_hw: row.get(9).unwrap(),
+    //             other: row.get(10).unwrap(),
+    //         })
+    //     })
+    //     .unwrap();
+    // for row in rows {
+    //     println!("cpe23uri: {:?}", row);
+    // }
+
+    let mut stmt = conn
+        .prepare("SELECT part, count(*) from tbl_cpe GROUP BY part")
+        .unwrap();
+    let rows = stmt
         .query_map([], |row| {
-            Ok(Cpe23Uri {
-                part: row.get(0).unwrap(),
-                vendor: row.get(1).unwrap(),
-                product: row.get(2).unwrap(),
-                version: row.get(3).unwrap(),
-                update: row.get(4).unwrap(),
-                edition: row.get(5).unwrap(),
-                language: row.get(6).unwrap(),
-                sw_edition: row.get(7).unwrap(),
-                target_sw: row.get(8).unwrap(),
-                target_hw: row.get(9).unwrap(),
-                other: row.get(10).unwrap(),
+            Ok(GroupByOne {
+                group_name: row.get(0).unwrap(),
+                count: row.get(1).unwrap(),
             })
         })
         .unwrap();
-    for cpe23uri in cpe23uris {
-        println!("cpe23uri: {:?}", cpe23uri);
+    for row in rows {
+        println!("group by part: {:?}", row);
+    }
+
+    let mut stmt = conn
+        .prepare("SELECT part, vendor count(*) from tbl_cpe GROUP BY part, vendor")
+        .unwrap();
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(GroupByTwo {
+                group_name_a: row.get(0).unwrap(),
+                group_name_b: row.get(1).unwrap(),
+                count: row.get(2).unwrap(),
+            })
+        })
+        .unwrap();
+    for row in rows {
+        println!("group by part, vendor: {:?}", row);
+    }
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT part, vendor, product, count(*) from tbl_cpe GROUP BY part, vendor, product",
+        )
+        .unwrap();
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(GroupByThree {
+                group_name_a: row.get(0).unwrap(),
+                group_name_b: row.get(1).unwrap(),
+                group_name_c: row.get(2).unwrap(),
+                count: row.get(3).unwrap(),
+            })
+        })
+        .unwrap();
+    for row in rows {
+        println!("group by part, vendor: {:?}", row);
     }
 
     Ok(())
