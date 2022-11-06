@@ -30,21 +30,6 @@ pub async fn download_cpe() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[derive(Debug)]
-struct Cpe23Uri {
-    part: String,
-    vendor: String,
-    product: String,
-    version: String,
-    update: String,
-    edition: String,
-    language: String,
-    sw_edition: String,
-    target_sw: String,
-    target_hw: String,
-    other: String,
-}
-
-#[derive(Debug)]
 struct GroupByOne {
     group_name: String,
     count: u32,
@@ -70,7 +55,7 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
     let file = BufReader::new(file);
     let parser = EventReader::new(file);
     let conn = Connection::open("./data/cpe.db").unwrap();
-    conn.execute("DROP TABLE IF EXISTS tbl_cpe", ()).unwrap();
+    // conn.execute("DROP TABLE IF EXISTS tbl_cpe", ()).unwrap();
     conn.execute(
         "CREATE TABLE IF NOT EXISTS tbl_cpe (
         part  TEXT NOT NULL,
@@ -150,8 +135,11 @@ pub async fn cpe_stat() -> Result<(), Box<dyn std::error::Error>> {
             })
         })
         .unwrap();
+    let mut output = File::create("./data/group_by_part.csv").expect("create failed");
     for row in rows {
-        println!("group by part: {:?}", row);
+        let group_by_one = row.unwrap();
+        let line = format!("{},{}\n", group_by_one.group_name, group_by_one.count);
+        output.write_all(line.as_bytes()).expect("write failed");
     }
 
     let mut stmt = conn
@@ -166,8 +154,14 @@ pub async fn cpe_stat() -> Result<(), Box<dyn std::error::Error>> {
             })
         })
         .unwrap();
+    let mut output = File::create("./data/group_by_part_vendor.csv").expect("create failed");
     for row in rows {
-        println!("group by part, vendor: {:?}", row);
+        let group_by_two = row.unwrap();
+        let line = format!(
+            "{},{},{}\n",
+            group_by_two.group_name_a, group_by_two.group_name_b, group_by_two.count
+        );
+        output.write_all(line.as_bytes()).expect("write failed");
     }
 
     let mut stmt = conn
@@ -185,8 +179,18 @@ pub async fn cpe_stat() -> Result<(), Box<dyn std::error::Error>> {
             })
         })
         .unwrap();
+    let mut output =
+        File::create("./data/group_by_part_vendor_product.csv").expect("create failed");
     for row in rows {
-        println!("group by part, vendor: {:?}", row);
+        let group_by_three = row.unwrap();
+        let line = format!(
+            "{},{},{},{}\n",
+            group_by_three.group_name_a,
+            group_by_three.group_name_b,
+            group_by_three.group_name_c,
+            group_by_three.count
+        );
+        output.write_all(line.as_bytes()).expect("write failed");
     }
     Ok(())
 }
