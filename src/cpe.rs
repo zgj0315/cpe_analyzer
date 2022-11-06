@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path::Path;
 
+use rusqlite::Connection;
 use xml::reader::XmlEvent;
 use xml::EventReader;
 const CPE_DICT: &str = "./data/official-cpe-dictionary_v2.3.xml.zip";
@@ -34,7 +35,30 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
     let file = archive.by_name("official-cpe-dictionary_v2.3.xml").unwrap();
     let file = BufReader::new(file);
     let parser = EventReader::new(file);
+    let conn = Connection::open("./data/cpe.db").unwrap();
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS tbl_cpe (
+        part  TEXT NOT NULL,
+        vendor  TEXT NOT NULL,
+        product  TEXT NOT NULL,
+        version  TEXT NOT NULL,
+        update_  TEXT NOT NULL,
+        edition  TEXT NOT NULL,
+        language  TEXT NOT NULL,
+        sw_edition  TEXT NOT NULL,
+        target_sw  TEXT NOT NULL,
+        target_hw  TEXT NOT NULL,
+        other  TEXT NOT NULL
+    )",
+        (),
+    )
+    .unwrap();
+    let mut count = 0;
     for e in parser {
+        count += 1;
+        if count > 1000 {
+            break;
+        }
         match e {
             Ok(XmlEvent::StartElement {
                 name,
@@ -45,7 +69,30 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
                 if "cpe23-item" == local_name {
                     for attribute in &attributes {
                         let cpe23uri = &attribute.value;
-                        println!("{}", cpe23uri);
+                        let cpe_vec: Vec<&str> = cpe23uri.split(":").collect();
+                        let sql = "INSERT INTO tbl_cpe (
+                            part, vendor, product, version, update_, edition, 
+                            language, sw_edition, target_hw, target_sw, other) VALUES (
+                                ?1, ?2, ?3, ?4, ?5, ?6,
+                                ?7, ?8, ?9, ?10, ?11
+                            )";
+                        conn.execute(
+                            sql,
+                            (
+                                cpe_vec[0],
+                                cpe_vec[1],
+                                cpe_vec[2],
+                                cpe_vec[3],
+                                cpe_vec[4],
+                                cpe_vec[5],
+                                cpe_vec[6],
+                                cpe_vec[7],
+                                cpe_vec[8],
+                                cpe_vec[9],
+                                cpe_vec[10],
+                            ),
+                        )
+                        .unwrap();
                     }
                 }
             }
@@ -57,6 +104,11 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
             _ => {}
         }
     }
+    // let mut stmt = conn.prepare("SELECT * from tbl_cpe").unwrap();
+    // let mut rows = stmt.query([]).unwrap();
+    // for row in rows {
+    // println!("rows: {:?}", row);
+    // }
 
     Ok(())
 }
