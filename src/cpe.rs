@@ -134,29 +134,11 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
             _ => {}
         }
     }
+    Ok(())
+}
 
-    // let mut stmt = conn.prepare("SELECT * from tbl_cpe").unwrap();
-    // let rows = stmt
-    //     .query_map([], |row| {
-    //         Ok(Cpe23Uri {
-    //             part: row.get(0).unwrap(),
-    //             vendor: row.get(1).unwrap(),
-    //             product: row.get(2).unwrap(),
-    //             version: row.get(3).unwrap(),
-    //             update: row.get(4).unwrap(),
-    //             edition: row.get(5).unwrap(),
-    //             language: row.get(6).unwrap(),
-    //             sw_edition: row.get(7).unwrap(),
-    //             target_sw: row.get(8).unwrap(),
-    //             target_hw: row.get(9).unwrap(),
-    //             other: row.get(10).unwrap(),
-    //         })
-    //     })
-    //     .unwrap();
-    // for row in rows {
-    //     println!("cpe23uri: {:?}", row);
-    // }
-
+pub async fn cpe_stat() -> Result<(), Box<dyn std::error::Error>> {
+    let conn = Connection::open("./data/cpe.db").unwrap();
     let mut stmt = conn
         .prepare("SELECT part, count(*) from tbl_cpe GROUP BY part")
         .unwrap();
@@ -206,10 +188,8 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
     for row in rows {
         println!("group by part, vendor: {:?}", row);
     }
-
     Ok(())
 }
-
 #[cfg(test)]
 mod tests {
 
@@ -224,5 +204,11 @@ mod tests {
     async fn test_put_cpe_to_db() {
         let future_put_cpe_to_db = put_cpe_to_db();
         let _ = tokio::join!(future_put_cpe_to_db);
+    }
+
+    #[tokio::test]
+    async fn test_cpe_stat() {
+        let future_cpe_stat = cpe_stat();
+        let _ = tokio::join!(future_cpe_stat);
     }
 }
