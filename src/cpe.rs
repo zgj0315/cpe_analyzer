@@ -155,7 +155,7 @@ pub async fn cpe_stat() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut stmt = conn
-        .prepare("SELECT part, vendor count(*) from tbl_cpe GROUP BY part, vendor")
+        .prepare("SELECT part, vendor, count(*) from tbl_cpe GROUP BY part, vendor")
         .unwrap();
     let rows = stmt
         .query_map([], |row| {
