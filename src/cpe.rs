@@ -29,6 +29,21 @@ pub async fn download_cpe() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[derive(Debug)]
+struct Cpe23Uri {
+    part: String,
+    vendor: String,
+    product: String,
+    version: String,
+    update: String,
+    edition: String,
+    language: String,
+    sw_edition: String,
+    target_sw: String,
+    target_hw: String,
+    other: String,
+}
+
 pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
     let zip_file = File::open(CPE_DICT).unwrap();
     let mut archive = zip::ZipArchive::new(zip_file).unwrap();
@@ -36,6 +51,7 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
     let file = BufReader::new(file);
     let parser = EventReader::new(file);
     let conn = Connection::open("./data/cpe.db").unwrap();
+    conn.execute("DROP TABLE IF EXISTS tbl_cpe", ()).unwrap();
     conn.execute(
         "CREATE TABLE IF NOT EXISTS tbl_cpe (
         part  TEXT NOT NULL,
@@ -53,12 +69,8 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
         (),
     )
     .unwrap();
-    let mut count = 0;
+
     for e in parser {
-        count += 1;
-        if count > 1000 {
-            break;
-        }
         match e {
             Ok(XmlEvent::StartElement {
                 name,
@@ -79,8 +91,6 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
                         conn.execute(
                             sql,
                             (
-                                cpe_vec[0],
-                                cpe_vec[1],
                                 cpe_vec[2],
                                 cpe_vec[3],
                                 cpe_vec[4],
@@ -90,6 +100,8 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
                                 cpe_vec[8],
                                 cpe_vec[9],
                                 cpe_vec[10],
+                                cpe_vec[11],
+                                cpe_vec[12],
                             ),
                         )
                         .unwrap();
@@ -104,11 +116,28 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
             _ => {}
         }
     }
-    // let mut stmt = conn.prepare("SELECT * from tbl_cpe").unwrap();
-    // let mut rows = stmt.query([]).unwrap();
-    // for row in rows {
-    // println!("rows: {:?}", row);
-    // }
+
+    let mut stmt = conn.prepare("SELECT * from tbl_cpe").unwrap();
+    let cpe23uris = stmt
+        .query_map([], |row| {
+            Ok(Cpe23Uri {
+                part: row.get(0).unwrap(),
+                vendor: row.get(1).unwrap(),
+                product: row.get(2).unwrap(),
+                version: row.get(3).unwrap(),
+                update: row.get(4).unwrap(),
+                edition: row.get(5).unwrap(),
+                language: row.get(6).unwrap(),
+                sw_edition: row.get(7).unwrap(),
+                target_sw: row.get(8).unwrap(),
+                target_hw: row.get(9).unwrap(),
+                other: row.get(10).unwrap(),
+            })
+        })
+        .unwrap();
+    for cpe23uri in cpe23uris {
+        println!("cpe23uri: {:?}", cpe23uri);
+    }
 
     Ok(())
 }
