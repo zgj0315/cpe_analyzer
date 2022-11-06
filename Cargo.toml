@@ -1,0 +1,8 @@
+[package]
+edition = "2021"
+name = "cpe_analyzer"
+version = "0.1.0"
+
+[dependencies]
+rusqlite = "0.28"
+xml-rs = "0.8"
