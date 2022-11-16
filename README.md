@@ -1,5 +1,6 @@
-# cpe_analyzer
-cpe数据分析
+# cpe数据分析
+## 分析目的
+分析nvd官方的cpe-dictionary文件，统计厂商个数，应用个数
 
 ## 流程说明
 - [x] 下载cpe字典文件，地址：https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.gz
