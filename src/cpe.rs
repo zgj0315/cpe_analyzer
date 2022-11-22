@@ -53,19 +53,15 @@ struct GroupByThree {
     count: u32,
 }
 pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
-    let db_path = Path::new("./data/cpe.db");
-    if db_path.exists() {
-        println!("{:?} already exists, skipping put cpe to db", db_path);
-    } else {
-        let zip_file = File::open(CPE_DICT).unwrap();
-        let mut archive = zip::ZipArchive::new(zip_file).unwrap();
-        let file = archive.by_name("official-cpe-dictionary_v2.3.xml").unwrap();
-        let file = BufReader::new(file);
-        let parser = EventReader::new(file);
-        let conn = Connection::open("./data/cpe.db").unwrap();
-        // conn.execute("DROP TABLE IF EXISTS tbl_cpe", ()).unwrap();
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS tbl_cpe (
+    let zip_file = File::open(CPE_DICT).unwrap();
+    let mut archive = zip::ZipArchive::new(zip_file).unwrap();
+    let file = archive.by_name("official-cpe-dictionary_v2.3.xml").unwrap();
+    let file = BufReader::new(file);
+    let parser = EventReader::new(file);
+    let conn = Connection::open("./data/cpe.db").unwrap();
+    conn.execute("DROP TABLE IF EXISTS tbl_cpe", ()).unwrap();
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS tbl_cpe (
         part  TEXT NOT NULL,
         vendor  TEXT NOT NULL,
         product  TEXT NOT NULL,
@@ -78,54 +74,53 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
         target_hw  TEXT NOT NULL,
         other  TEXT NOT NULL
     )",
-            (),
-        )
-        .unwrap();
-        for e in parser {
-            match e {
-                Ok(XmlEvent::StartElement {
-                    name,
-                    attributes,
-                    namespace: _,
-                }) => {
-                    let local_name = &name.local_name;
-                    if "cpe23-item" == local_name {
-                        for attribute in &attributes {
-                            let cpe23uri = &attribute.value;
-                            let cpe_vec: Vec<&str> = cpe23uri.split(":").collect();
-                            let sql = "INSERT INTO tbl_cpe (
+        (),
+    )
+    .unwrap();
+    for e in parser {
+        match e {
+            Ok(XmlEvent::StartElement {
+                name,
+                attributes,
+                namespace: _,
+            }) => {
+                let local_name = &name.local_name;
+                if "cpe23-item" == local_name {
+                    for attribute in &attributes {
+                        let cpe23uri = &attribute.value;
+                        let cpe_vec: Vec<&str> = cpe23uri.split(":").collect();
+                        let sql = "INSERT INTO tbl_cpe (
                             part, vendor, product, version, update_, edition, 
                             language, sw_edition, target_hw, target_sw, other) VALUES (
                                 ?1, ?2, ?3, ?4, ?5, ?6,
                                 ?7, ?8, ?9, ?10, ?11
                             )";
-                            conn.execute(
-                                sql,
-                                (
-                                    cpe_vec[2],
-                                    cpe_vec[3],
-                                    cpe_vec[4],
-                                    cpe_vec[5],
-                                    cpe_vec[6],
-                                    cpe_vec[7],
-                                    cpe_vec[8],
-                                    cpe_vec[9],
-                                    cpe_vec[10],
-                                    cpe_vec[11],
-                                    cpe_vec[12],
-                                ),
-                            )
-                            .unwrap();
-                        }
+                        conn.execute(
+                            sql,
+                            (
+                                cpe_vec[2],
+                                cpe_vec[3],
+                                cpe_vec[4],
+                                cpe_vec[5],
+                                cpe_vec[6],
+                                cpe_vec[7],
+                                cpe_vec[8],
+                                cpe_vec[9],
+                                cpe_vec[10],
+                                cpe_vec[11],
+                                cpe_vec[12],
+                            ),
+                        )
+                        .unwrap();
                     }
                 }
-
-                Err(e) => {
-                    println!("Error: {}", e);
-                    break;
-                }
-                _ => {}
             }
+
+            Err(e) => {
+                println!("Error: {}", e);
+                break;
+            }
+            _ => {}
         }
     }
     Ok(())
