@@ -1,4 +1,5 @@
 mod cpe;
+mod cve;
 use cpe::{cpe_stat, download_cpe, put_cpe_to_db};
 
 #[tokio::main]
