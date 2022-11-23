@@ -15,8 +15,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .event_format(format)
         .init();
     cpe::download_cpe().await?;
-    cpe::put_cpe_to_db().await?;
     cve::download_cve().await?;
+    cpe::put_cpe_to_db().await?;
     cve::put_cpe_to_db().await?;
     data_stat::cpe_clean().await?;
     data_stat::cpe_stat().await?;
