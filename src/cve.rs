@@ -139,30 +139,6 @@ fn get_cpe_from_node(node: &serde_json::Value) -> Vec<&str> {
     cpe_vec
 }
 
-pub async fn clean_data() -> Result<(), Box<dyn std::error::Error>> {
-    let conn = Connection::open("./data/cpe.db").unwrap();
-    let sql = "DROP TABLE IF EXISTS tbl_cpe_dict";
-    conn.execute(sql, ()).unwrap();
-    let sql = "CREATE TABLE IF NOT EXISTS tbl_cpe_dict (
-        part  TEXT NOT NULL,
-        vendor  TEXT NOT NULL,
-        product  TEXT NOT NULL
-    )";
-    conn.execute(sql, ()).unwrap();
-    let sql = "INSERT INTO tbl_cpe_dict(part, vendor, product) SELECT DISTINCT part, vendor, product FROM tbl_cpe";
-    conn.execute(sql, ()).unwrap();
-    let sql = "DROP TABLE IF EXISTS tbl_cpe_cve";
-    conn.execute(sql, ()).unwrap();
-    let sql = "CREATE TABLE IF NOT EXISTS tbl_cpe_cve (
-        part  TEXT NOT NULL,
-        vendor  TEXT NOT NULL,
-        product  TEXT NOT NULL
-    )";
-    conn.execute(sql, ()).unwrap();
-    let sql = "INSERT INTO tbl_cpe_cve(part, vendor, product) SELECT DISTINCT part, vendor, product FROM tbl_cpe_from_cve";
-    conn.execute(sql, ()).unwrap();
-    Ok(())
-}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,12 +152,6 @@ mod tests {
     #[tokio::test]
     async fn test_put_cpe_to_db() {
         let future = put_cpe_to_db();
-        let _ = tokio::join!(future);
-    }
-
-    #[tokio::test]
-    async fn test_clean_data() {
-        let future = clean_data();
         let _ = tokio::join!(future);
     }
 }

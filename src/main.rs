@@ -1,5 +1,6 @@
 mod cpe;
 mod cve;
+mod data_stat;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,9 +18,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
     cpe::download_cpe().await?;
     cpe::put_cpe_to_db().await?;
-    cpe::cpe_stat().await?;
     cve::download_cve().await?;
     cve::put_cpe_to_db().await?;
-    cve::clean_data().await?;
+    data_stat::cpe_clean().await?;
+    data_stat::cpe_stat().await?;
     Ok(())
 }
