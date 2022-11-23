@@ -12,24 +12,17 @@ pub async fn download_cpe() -> Result<(), Box<dyn std::error::Error>> {
         fs::create_dir(path).unwrap();
     }
     let path = Path::new(CPE_DICT);
-    if path.exists() {
-        println!(
-            "{:?} exists, splitting download_cpe",
-            path.file_name().unwrap()
-        );
-    } else {
-        let mut file = match File::create(&path) {
-            Err(e) => panic!("Error creating {}", e),
-            Ok(file) => file,
-        };
-        let rsp = reqwest::get(
-            "https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip",
-        )
-        .await?;
-        let rsp_bytes = rsp.bytes().await?;
-        let _ = file.write_all(&rsp_bytes);
-        println!("{:?} downloaded successfully", path.file_name().unwrap());
-    }
+    let mut file = match File::create(&path) {
+        Err(e) => panic!("Error creating {}", e),
+        Ok(file) => file,
+    };
+    let rsp = reqwest::get(
+        "https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip",
+    )
+    .await?;
+    let rsp_bytes = rsp.bytes().await?;
+    let _ = file.write_all(&rsp_bytes);
+    log::info!("{:?} downloaded successfully", path.file_name().unwrap());
     Ok(())
 }
 
@@ -117,7 +110,7 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             Err(e) => {
-                println!("Error: {}", e);
+                log::error!("Error: {}", e);
                 break;
             }
             _ => {}
