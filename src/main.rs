@@ -1,6 +1,4 @@
-mod cpe;
-mod cve;
-mod data_stat;
+use cpe_analyzer::{cpe, cve, data_stat};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
