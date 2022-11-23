@@ -70,30 +70,24 @@ pub async fn cpe_stat() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut stmt = conn
-        .prepare(
-            "SELECT part, vendor, product, count(*) from tbl_cpe_cve GROUP BY part, vendor, product ORDER BY count(*) DESC",
-        )
+        .prepare("SELECT part, vendor, product from tbl_cpe_cve")
         .unwrap();
     let rows = stmt
         .query_map([], |row| {
-            Ok(GroupByThree {
+            Ok(Cpe {
                 group_name_a: row.get(0).unwrap(),
                 group_name_b: row.get(1).unwrap(),
                 group_name_c: row.get(2).unwrap(),
-                count: row.get(3).unwrap(),
             })
         })
         .unwrap();
     let mut output =
-        File::create("./data/group_by_part_vendor_product.csv").expect("create failed");
+        File::create("./data/part_vendor_product.csv").expect("create failed");
     for row in rows {
         let group_by_three = row.unwrap();
         let line = format!(
-            "{},{},{},{}\n",
-            group_by_three.group_name_a,
-            group_by_three.group_name_b,
-            group_by_three.group_name_c,
-            group_by_three.count
+            "{},{},{}\n",
+            group_by_three.group_name_a, group_by_three.group_name_b, group_by_three.group_name_c
         );
         output.write_all(line.as_bytes()).expect("write failed");
     }
@@ -112,11 +106,10 @@ struct GroupByTwo {
     count: u32,
 }
 #[derive(Debug)]
-struct GroupByThree {
+struct Cpe {
     group_name_a: String,
     group_name_b: String,
     group_name_c: String,
-    count: u32,
 }
 
 #[cfg(test)]
