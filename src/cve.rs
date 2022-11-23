@@ -7,7 +7,7 @@ use std::{
 use rusqlite::Connection;
 use serde_json::Value;
 
-async fn download_cve() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn download_cve() -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::new("./data");
     if !path.exists() {
         fs::create_dir(path).unwrap();
@@ -18,27 +18,20 @@ async fn download_cve() -> Result<(), Box<dyn std::error::Error>> {
         let url = format!("https://nvd.nist.gov/feeds/json/cve/1.1/{}", file);
         let file_path = format!("./data/{}", file);
         let path = Path::new(&file_path);
-        if path.exists() {
-            println!(
-                "{:?} exists, splitting download_cpe",
-                path.file_name().unwrap()
-            );
-        } else {
-            let mut file = match File::create(&path) {
-                Err(e) => panic!("Error creating {}", e),
-                Ok(file) => file,
-            };
-            let rsp = reqwest::get(url).await?;
-            let rsp_bytes = rsp.bytes().await?;
-            let _ = file.write_all(&rsp_bytes);
-            println!("{:?} downloaded successfully", path.file_name().unwrap());
-        }
+        let mut file = match File::create(&path) {
+            Err(e) => panic!("Error creating {}", e),
+            Ok(file) => file,
+        };
+        let rsp = reqwest::get(url).await?;
+        let rsp_bytes = rsp.bytes().await?;
+        let _ = file.write_all(&rsp_bytes);
+        log::info!("{:?} downloaded successfully", path.file_name().unwrap());
         year += 1;
     }
     Ok(())
 }
 
-async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
     let conn = Connection::open("./data/cpe.db").unwrap();
     conn.execute("DROP TABLE IF EXISTS tbl_cpe_from_cve", ())
         .unwrap();
@@ -75,7 +68,7 @@ async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
                     for node in nodes.into_iter() {
                         let cpe_vec = get_cpe_from_node(node);
                         if cpe_vec.len() == 0 {
-                            println!("not find cpe, nodes: {:?}", node);
+                            log::info!("not find cpe, nodes: {:?}", node);
                         }
                         for cpe in cpe_vec {
                             let cpe_vec: Vec<&str> = cpe.split(":").collect();
@@ -107,7 +100,7 @@ async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             None => {
-                println!("no CVE_Items found");
+                log::info!("no CVE_Items found");
             }
         }
         year += 1;
@@ -127,7 +120,7 @@ fn get_cpe_from_node(node: &serde_json::Value) -> Vec<&str> {
             }
         }
         None => {
-            println!("children is None");
+            log::info!("children is None");
         }
     }
     match node["cpe_match"].as_array() {
@@ -140,7 +133,7 @@ fn get_cpe_from_node(node: &serde_json::Value) -> Vec<&str> {
             }
         }
         None => {
-            println!("cpe_match is None");
+            log::info!("cpe_match is None");
         }
     }
     cpe_vec

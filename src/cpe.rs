@@ -12,46 +12,20 @@ pub async fn download_cpe() -> Result<(), Box<dyn std::error::Error>> {
         fs::create_dir(path).unwrap();
     }
     let path = Path::new(CPE_DICT);
-    if path.exists() {
-        println!(
-            "{:?} exists, splitting download_cpe",
-            path.file_name().unwrap()
-        );
-    } else {
-        let mut file = match File::create(&path) {
-            Err(e) => panic!("Error creating {}", e),
-            Ok(file) => file,
-        };
-        let rsp = reqwest::get(
-            "https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip",
-        )
-        .await?;
-        let rsp_bytes = rsp.bytes().await?;
-        let _ = file.write_all(&rsp_bytes);
-        println!("{:?} downloaded successfully", path.file_name().unwrap());
-    }
+    let mut file = match File::create(&path) {
+        Err(e) => panic!("Error creating {}", e),
+        Ok(file) => file,
+    };
+    let rsp = reqwest::get(
+        "https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip",
+    )
+    .await?;
+    let rsp_bytes = rsp.bytes().await?;
+    let _ = file.write_all(&rsp_bytes);
+    log::info!("{:?} downloaded successfully", path.file_name().unwrap());
     Ok(())
 }
 
-#[derive(Debug)]
-struct GroupByOne {
-    group_name: String,
-    count: u32,
-}
-
-#[derive(Debug)]
-struct GroupByTwo {
-    group_name_a: String,
-    group_name_b: String,
-    count: u32,
-}
-#[derive(Debug)]
-struct GroupByThree {
-    group_name_a: String,
-    group_name_b: String,
-    group_name_c: String,
-    count: u32,
-}
 pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
     let zip_file = File::open(CPE_DICT).unwrap();
     let mut archive = zip::ZipArchive::new(zip_file).unwrap();
@@ -117,7 +91,7 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             Err(e) => {
-                println!("Error: {}", e);
+                log::error!("Error: {}", e);
                 break;
             }
             _ => {}
@@ -125,83 +99,10 @@ pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
-
-pub async fn cpe_stat() -> Result<(), Box<dyn std::error::Error>> {
-    let conn = Connection::open("./data/cpe.db").unwrap();
-    let mut stmt = conn
-        .prepare("SELECT part, count(*) from tbl_cpe GROUP BY part ORDER BY count(*) DESC")
-        .unwrap();
-    let rows = stmt
-        .query_map([], |row| {
-            Ok(GroupByOne {
-                group_name: row.get(0).unwrap(),
-                count: row.get(1).unwrap(),
-            })
-        })
-        .unwrap();
-    let mut output = File::create("./data/group_by_part.csv").expect("create failed");
-    for row in rows {
-        let group_by_one = row.unwrap();
-        let line = format!("{},{}\n", group_by_one.group_name, group_by_one.count);
-        output.write_all(line.as_bytes()).expect("write failed");
-    }
-
-    let mut stmt = conn
-        .prepare("SELECT part, vendor, count(*) from tbl_cpe GROUP BY part, vendor ORDER BY count(*) DESC")
-        .unwrap();
-    let rows = stmt
-        .query_map([], |row| {
-            Ok(GroupByTwo {
-                group_name_a: row.get(0).unwrap(),
-                group_name_b: row.get(1).unwrap(),
-                count: row.get(2).unwrap(),
-            })
-        })
-        .unwrap();
-    let mut output = File::create("./data/group_by_part_vendor.csv").expect("create failed");
-    for row in rows {
-        let group_by_two = row.unwrap();
-        let line = format!(
-            "{},{},{}\n",
-            group_by_two.group_name_a, group_by_two.group_name_b, group_by_two.count
-        );
-        output.write_all(line.as_bytes()).expect("write failed");
-    }
-
-    let mut stmt = conn
-        .prepare(
-            "SELECT part, vendor, product, count(*) from tbl_cpe GROUP BY part, vendor, product ORDER BY count(*) DESC",
-        )
-        .unwrap();
-    let rows = stmt
-        .query_map([], |row| {
-            Ok(GroupByThree {
-                group_name_a: row.get(0).unwrap(),
-                group_name_b: row.get(1).unwrap(),
-                group_name_c: row.get(2).unwrap(),
-                count: row.get(3).unwrap(),
-            })
-        })
-        .unwrap();
-    let mut output =
-        File::create("./data/group_by_part_vendor_product.csv").expect("create failed");
-    for row in rows {
-        let group_by_three = row.unwrap();
-        let line = format!(
-            "{},{},{},{}\n",
-            group_by_three.group_name_a,
-            group_by_three.group_name_b,
-            group_by_three.group_name_c,
-            group_by_three.count
-        );
-        output.write_all(line.as_bytes()).expect("write failed");
-    }
-    Ok(())
-}
 #[cfg(test)]
 mod tests {
-
     use super::*;
+
     #[tokio::test]
     async fn test_download_cpe() {
         let future_download_cpe = download_cpe();
@@ -212,11 +113,5 @@ mod tests {
     async fn test_put_cpe_to_db() {
         let future_put_cpe_to_db = put_cpe_to_db();
         let _ = tokio::join!(future_put_cpe_to_db);
-    }
-
-    #[tokio::test]
-    async fn test_cpe_stat() {
-        let future_cpe_stat = cpe_stat();
-        let _ = tokio::join!(future_cpe_stat);
     }
 }
