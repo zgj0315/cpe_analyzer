@@ -7,6 +7,8 @@ use std::{
 use rusqlite::Connection;
 use serde_json::Value;
 
+use crate::cpe::SQLITE_DB;
+
 pub async fn download_cve() -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::new("./data");
     if !path.exists() {
@@ -32,7 +34,7 @@ pub async fn download_cve() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
-    let conn = Connection::open("./data/cpe.db").unwrap();
+    let conn = Connection::open(SQLITE_DB).unwrap();
     conn.execute("DROP TABLE IF EXISTS tbl_cpe_from_cve", ())
         .unwrap();
     conn.execute(

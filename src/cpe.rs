@@ -5,21 +5,24 @@ use std::path::Path;
 use rusqlite::Connection;
 use xml::reader::XmlEvent;
 use xml::EventReader;
-const CPE_DICT: &str = "./data/official-cpe-dictionary_v2.3.xml.zip";
+
+pub static SQLITE_DB: &str = "./data/cpe.db";
+static CPE_DICT_LOCAL_PATH: &str = "./data/official-cpe-dictionary_v2.3.xml.zip";
+static CPE_DICT_URL: &str =
+    "https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip";
+static CPE_DICT_XML_FILE_NAME: &str = "official-cpe-dictionary_v2.3.xml";
+
 pub async fn download_cpe() -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::new("./data");
     if !path.exists() {
         fs::create_dir(path).unwrap();
     }
-    let path = Path::new(CPE_DICT);
+    let path = Path::new(CPE_DICT_LOCAL_PATH);
     let mut file = match File::create(&path) {
         Err(e) => panic!("Error creating {}", e),
         Ok(file) => file,
     };
-    let rsp = reqwest::get(
-        "https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip",
-    )
-    .await?;
+    let rsp = reqwest::get(CPE_DICT_URL).await?;
     let rsp_bytes = rsp.bytes().await?;
     let _ = file.write_all(&rsp_bytes);
     log::info!("{:?} downloaded successfully", path.file_name().unwrap());
@@ -27,12 +30,12 @@ pub async fn download_cpe() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub async fn put_cpe_to_db() -> Result<(), Box<dyn std::error::Error>> {
-    let zip_file = File::open(CPE_DICT).unwrap();
+    let zip_file = File::open(CPE_DICT_LOCAL_PATH).unwrap();
     let mut archive = zip::ZipArchive::new(zip_file).unwrap();
-    let file = archive.by_name("official-cpe-dictionary_v2.3.xml").unwrap();
+    let file = archive.by_name(CPE_DICT_XML_FILE_NAME).unwrap();
     let file = BufReader::new(file);
     let parser = EventReader::new(file);
-    let conn = Connection::open("./data/cpe.db").unwrap();
+    let conn = Connection::open(SQLITE_DB).unwrap();
     conn.execute("DROP TABLE IF EXISTS tbl_cpe", ()).unwrap();
     conn.execute(
         "CREATE TABLE IF NOT EXISTS tbl_cpe (
