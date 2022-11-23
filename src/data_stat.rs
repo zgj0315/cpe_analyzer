@@ -70,7 +70,7 @@ pub async fn cpe_stat() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut stmt = conn
-        .prepare("SELECT part, vendor, product from tbl_cpe_cve")
+        .prepare("SELECT part, vendor, product from tbl_cpe_cve ORDER BY part, vendor, product")
         .unwrap();
     let rows = stmt
         .query_map([], |row| {
