@@ -14,8 +14,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_ansi(true)
         .event_format(format)
         .init();
-    cpe::download_cpe().await?;
-    cve::download_cve().await?;
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.len() == 2 {
+        if "download" == &args[1] {
+            log::info!("download file");
+            cpe::download_cpe().await?;
+            cve::download_cve().await?;
+        }
+    }
     cpe::put_cpe_to_db().await?;
     cve::put_cpe_to_db().await?;
     data_stat::cpe_clean().await?;
