@@ -21,11 +21,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             log::info!("download file");
             cpe::download_cpe().await?;
             cve::download_cve().await?;
+        } else if "put" == &args[1] {
+            cpe::put_cpe_to_db().await?;
+            cve::put_cpe_to_db().await?;
+        } else if "stat" == &args[1] {
+            data_stat::cpe_clean().await?;
+            data_stat::cpe_stat().await?;
+        } else {
+            log::warn!("eg: {} [download|put|stat]", args[0]);
+            std::process::exit(1);
         }
+    } else {
+        log::warn!("eg: {} [download|put|stat]", args[0]);
+        std::process::exit(1);
     }
-    cpe::put_cpe_to_db().await?;
-    cve::put_cpe_to_db().await?;
-    data_stat::cpe_clean().await?;
-    data_stat::cpe_stat().await?;
     Ok(())
 }
